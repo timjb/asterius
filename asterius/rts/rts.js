@@ -204,6 +204,21 @@
         __asterius_jsffi_instance.vault.get(__asterius_decodeLatin1(k)),
       vaultDelete: k =>
         __asterius_jsffi_instance.vault.delete(__asterius_decodeLatin1(k)),
+      unsafeMakeHaskellCallback: f => () => {
+        const tid = __asterius_wasm_instance.exports.rts_evalLazyIO(f);
+        __asterius_wasm_instance.exports.rts_checkSchedStatus(tid);
+      },
+      unsafeMakeHaskellCallback1: f => ev => {
+        const tid = __asterius_wasm_instance.exports.rts_evalLazyIO(
+          __asterius_wasm_instance.exports.rts_apply(
+            f,
+            __asterius_wasm_instance.exports.rts_mkInt(
+              __asterius_jsffi_newJSRef(ev)
+            )
+          )
+        );
+        __asterius_wasm_instance.exports.rts_checkSchedStatus(tid);
+      },
       makeHaskellCallback: s => () => {
         const export_funcs = __asterius_wasm_instance.exports;
         export_funcs.rts_evalIO(__asterius_deRefStablePtr(s));

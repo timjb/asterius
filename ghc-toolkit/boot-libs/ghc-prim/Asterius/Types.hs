@@ -8,12 +8,18 @@ module Asterius.Types
   , JSArrayBuffer(..)
   , JSString(..)
   , JSArray(..)
+  , JSObject(..)
+  , JSFunction(..)
   , fromJSArrayBuffer
   , toJSArrayBuffer
   , fromJSString
   , toJSString
   , fromJSArray
   , toJSArray
+  , indexJSObject
+  , callJSFunction
+  , makeHaskellCallback
+  , makeHaskellCallback1
   , jsStringDecodeUTF8
   , jsStringEncodeUTF8
   , jsStringDecodeLatin1
@@ -43,6 +49,12 @@ newtype JSString =
 newtype JSArray =
   JSArray JSVal
 
+newtype JSObject =
+  JSObject JSVal
+
+newtype JSFunction =
+  JSFunction JSVal
+
 {-# INLINE fromJSArrayBuffer #-}
 fromJSArrayBuffer :: JSArrayBuffer -> MutableByteArray# RealWorld
 fromJSArrayBuffer buf = accursedUnutterableAddrToAny (c_fromJSArrayBuffer buf)
@@ -50,6 +62,30 @@ fromJSArrayBuffer buf = accursedUnutterableAddrToAny (c_fromJSArrayBuffer buf)
 {-# INLINE toJSArrayBuffer #-}
 toJSArrayBuffer :: Addr# -> Int -> JSArrayBuffer
 toJSArrayBuffer = c_toJSArrayBuffer
+
+{-# INLINE indexJSObject #-}
+indexJSObject :: JSObject -> JSString -> JSVal
+indexJSObject = js_object_index
+
+{-# INLINE callJSFunction #-}
+callJSFunction :: JSFunction -> [JSVal] -> IO JSVal
+callJSFunction f args = js_apply f (toJSArray args)
+
+{-# INLINE makeHaskellCallback #-}
+makeHaskellCallback :: IO () -> IO JSFunction
+makeHaskellCallback f =
+  IO
+    (\s0 ->
+       case anyToAddr# f s0 of
+         (# s1, addr #) -> unIO (js_mk_hs_callback addr) s1)
+
+{-# INLINE makeHaskellCallback1 #-}
+makeHaskellCallback1 :: (JSVal -> IO ()) -> IO JSFunction
+makeHaskellCallback1 f =
+  IO
+    (\s0 ->
+       case anyToAddr# f s0 of
+         (# s1, addr #) -> unIO (js_mk_hs_callback1 addr) s1)
 
 {-# INLINE fromJSString #-}
 fromJSString :: JSString -> [Char]
@@ -141,3 +177,15 @@ foreign import javascript "__asterius_jsffi.decodeUTF32LE(${1})" jsStringDecodeU
 
 foreign import javascript "__asterius_jsffi.encodeUTF32LE(${1})" jsStringEncodeUTF32LE
   :: JSString -> JSArrayBuffer
+
+foreign import javascript "${1}[${2}]" js_object_index
+  :: JSObject -> JSString -> JSVal
+
+foreign import javascript "${1}.apply({},${2})" js_apply
+  :: JSFunction -> JSArray -> IO JSVal
+
+foreign import javascript "__asterius_jsffi.unsafeMakeHaskellCallback(${1})" js_mk_hs_callback
+  :: Addr# -> IO JSFunction
+
+foreign import javascript "__asterius_jsffi.unsafeMakeHaskellCallback1(${1})" js_mk_hs_callback1
+  :: Addr# -> IO JSFunction
