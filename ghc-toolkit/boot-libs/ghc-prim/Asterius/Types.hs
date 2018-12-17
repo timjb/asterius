@@ -14,6 +14,14 @@ module Asterius.Types
   , toJSString
   , fromJSArray
   , toJSArray
+  , jsStringDecodeUTF8
+  , jsStringEncodeUTF8
+  , jsStringDecodeLatin1
+  , jsStringEncodeLatin1
+  , jsStringDecodeUTF16LE
+  , jsStringEncodeUTF16LE
+  , jsStringDecodeUTF32LE
+  , jsStringEncodeUTF32LE
   , js_freezeTempJSRef
   ) where
 
@@ -109,3 +117,27 @@ foreign import javascript "__asterius_jsffi.mutTempJSRef(${1}, arr => (arr.push(
 
 foreign import javascript "__asterius_jsffi.freezeTempJSRef(${1})" js_freezeTempJSRef
   :: Int -> IO JSVal
+
+foreign import javascript "__asterius_jsffi.decodeUTF8(${1})" jsStringDecodeUTF8
+  :: JSArrayBuffer -> JSString
+
+foreign import javascript "__asterius_jsffi.encodeUTF8(${1})" jsStringEncodeUTF8
+  :: JSString -> JSArrayBuffer
+
+foreign import javascript "__asterius_jsffi.decodeLatin1(${1})" jsStringDecodeLatin1
+  :: JSArrayBuffer -> JSString
+
+foreign import javascript "__asterius_jsffi.encodeLatin1(${1})" jsStringEncodeLatin1
+  :: JSString -> JSArrayBuffer
+
+foreign import javascript "__asterius_jsffi.decodeUTF16LE(${1})" jsStringDecodeUTF16LE
+  :: JSArrayBuffer -> JSString
+
+foreign import javascript "__asterius_jsffi.encodeUTF16LE(${1})" jsStringEncodeUTF16LE
+  :: JSString -> JSArrayBuffer
+
+foreign import javascript "__asterius_jsffi.decodeUTF32LE(${1})" jsStringDecodeUTF32LE
+  :: JSArrayBuffer -> JSString
+
+foreign import javascript "__asterius_jsffi.encodeUTF32LE(${1})" jsStringEncodeUTF32LE
+  :: JSString -> JSArrayBuffer
