@@ -56,7 +56,7 @@ newtype JSFunction =
   JSFunction JSVal
 
 {-# INLINE fromJSArrayBuffer #-}
-fromJSArrayBuffer :: JSArrayBuffer -> MutableByteArray# RealWorld
+fromJSArrayBuffer :: JSArrayBuffer -> ByteArray#
 fromJSArrayBuffer buf = accursedUnutterableAddrToAny (c_fromJSArrayBuffer buf)
 
 {-# INLINE toJSArrayBuffer #-}
