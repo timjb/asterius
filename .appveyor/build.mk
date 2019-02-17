@@ -1,0 +1,12 @@
+SRC_HC_OPTS               = -O -H64m
+GhcStage1HcOpts           = -O
+GhcStage2HcOpts           = -O
+GhcLibHcOpts              = -O
+GhcLibWays                = v
+GhcRTSWays                = thr
+DYNAMIC_GHC_PROGRAMS      = NO
+SplitObjs                 = NO
+SplitSections             = NO
+BUILD_SPHINX_HTML         = NO
+BUILD_SPHINX_PDF          = NO
+HADDOCK_DOCS              = NO
