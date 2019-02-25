@@ -16,6 +16,7 @@ module Asterius.Resolve
 import Asterius.Builtins
 import Asterius.Internals
 import Asterius.Internals.MagicNumber
+import Asterius.Internals.TimeIt
 import Asterius.JSFFI
 import Asterius.MemoryTrap
 import Asterius.Relooper
@@ -23,6 +24,7 @@ import Asterius.Tracing
 import Asterius.Types
 import Asterius.Workarounds
 import Control.Exception
+import Control.Monad.IO.Class
 import Data.Binary
 import Data.ByteString.Builder
 import qualified Data.ByteString.Short as SBS
@@ -605,7 +607,7 @@ rewriteEmitEvent x = do
         go = gmapM f t
 
 resolveAsteriusModule ::
-     Monad m
+     MonadIO m
   => Bool
   -> FFIMarshalState
   -> [AsteriusEntitySymbol]
@@ -621,10 +623,12 @@ resolveAsteriusModule debug bundled_ffi_state export_funcs m_globals_resolved = 
         makeStaticsOffsetTable m_globals_resolved
       resolve_syms :: (Monad m, Data a) => a -> m a
       resolve_syms = resolveEntitySymbols ss_sym_map func_sym_map
-  m_globals_syms_resolved <- resolve_syms m_globals_resolved
+  m_globals_syms_resolved <-
+    timeIt "Reloc symbols" $ resolve_syms m_globals_resolved
   let func_imports =
         rtsFunctionImports debug <> generateFFIFunctionImports bundled_ffi_state
   new_function_map <-
+    timeIt "Resolve local regs & relooper" $
     fmap M.fromList $
     for (M.toList $ functionMap m_globals_syms_resolved) $ \(func_sym, AsteriusFunction {..}) -> do
       (body_locals_resolved, local_types) <-
@@ -643,6 +647,7 @@ resolveAsteriusModule debug bundled_ffi_state export_funcs m_globals_resolved = 
       pure (entityName func_sym, new_func)
   let mem = makeMemory m_globals_syms_resolved last_o ss_sym_map extra_segs
   (new_mod, err_msgs) <-
+    timeIt "Resolve events" $
     rewriteEmitEvent
       Module
         { functionMap' = new_function_map
@@ -664,7 +669,7 @@ resolveAsteriusModule debug bundled_ffi_state export_funcs m_globals_resolved = 
     , fromIntegral (initialPages mem) `quot` (mblock_size `quot` wasmPageSize))
 
 linkStart ::
-     Monad m
+     MonadIO m
   => Bool
   -> AsteriusStore
   -> S.Set AsteriusEntitySymbol
@@ -672,6 +677,7 @@ linkStart ::
   -> m (Module, [Event], LinkReport)
 linkStart debug store root_syms export_funcs = do
   (merged_m, report) <-
+    timeIt "Dependency analysis" $
     mergeSymbols
       debug
       store
@@ -683,6 +689,7 @@ linkStart debug store root_syms export_funcs = do
          ])
       (S.fromList export_funcs)
   (result_m, ss_sym_map, func_sym_map, err_msgs, static_mbs) <-
+    timeIt "All rewriting passes" $
     resolveAsteriusModule
       debug
       (bundledFFIMarshalState report)
