@@ -8,12 +8,14 @@ module Asterius.Passes.ResolveSymbols
   ) where
 
 import Asterius.Builtins
+import Asterius.Internals.FastString
 import Asterius.Internals.SYB
 import Asterius.Types
 import Data.Coerce
 import Data.Int
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.String
 import Type.Reflection
 
 {-# INLINABLE resolveSymbols #-}
@@ -28,6 +30,7 @@ resolveSymbols sym_map t =
             Just addr -> t {resolvedSymbol = Just addr}
             _ ->
               emitErrorMessage [I64] $
-              "Unresolved symbol: " <> coerce unresolvedSymbol
+              fromString $
+              "Unresolved symbol: " <> unpackFS (coerce unresolvedSymbol)
         _ -> t
     _ -> t

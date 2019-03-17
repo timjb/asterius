@@ -49,6 +49,7 @@ module Asterius.Types
   ) where
 
 import Asterius.Internals.Binary
+import Asterius.Internals.FastString
 import Bindings.Binaryen.Raw hiding (RelooperBlock)
 import Control.Exception
 import Data.Binary
@@ -150,7 +151,7 @@ data AsteriusModuleSymbol = AsteriusModuleSymbol
 instance Binary AsteriusModuleSymbol
 
 newtype AsteriusEntitySymbol = AsteriusEntitySymbol
-  { entityName :: SBS.ShortByteString
+  { entityName :: FastString
   } deriving (Eq, Ord, IsString, Binary, Semigroup)
 
 deriving newtype instance Show AsteriusEntitySymbol
@@ -368,7 +369,7 @@ data Expression
   | Call { target :: AsteriusEntitySymbol
          , operands :: [Expression]
          , callReturnTypes :: [ValueType] }
-  | CallImport { target' :: SBS.ShortByteString
+  | CallImport { target' :: FastString
                , operands :: [Expression]
                , callImportReturnTypes :: [ValueType] }
   | CallIndirect { indirectTarget :: Expression
@@ -421,7 +422,7 @@ data Function = Function
 instance Binary Function
 
 data FunctionImport = FunctionImport
-  { internalName, externalModuleName, externalBaseName :: SBS.ShortByteString
+  { internalName, externalModuleName, externalBaseName :: FastString
   , functionType :: FunctionType
   } deriving (Eq, Show, Data, Generic)
 
@@ -440,7 +441,7 @@ data MemoryImport = MemoryImport
 instance Binary MemoryImport
 
 data FunctionExport = FunctionExport
-  { internalName, externalName :: SBS.ShortByteString
+  { internalName, externalName :: FastString
   } deriving (Eq, Show, Data, Generic)
 
 instance Binary FunctionExport
@@ -458,7 +459,7 @@ newtype MemoryExport = MemoryExport
 instance Binary MemoryExport
 
 data FunctionTable = FunctionTable
-  { tableFunctionNames :: [SBS.ShortByteString]
+  { tableFunctionNames :: [FastString]
   , tableOffset :: BinaryenIndex
   } deriving (Eq, Show, Data, Generic)
 
@@ -472,7 +473,7 @@ data DataSegment = DataSegment
 instance Binary DataSegment
 
 data Module = Module
-  { functionMap' :: LM.Map SBS.ShortByteString Function
+  { functionMap' :: LM.Map FastString Function
   , functionImports :: [FunctionImport]
   , functionExports :: [FunctionExport]
   , functionTable :: FunctionTable

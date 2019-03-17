@@ -9,9 +9,9 @@ module Asterius.MemoryTrap
   , addMemoryTrapDeep
   ) where
 
+import Asterius.Internals.FastString
 import Asterius.Types
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Short as SBS
 import Data.Data (Data, gmapM)
 import qualified Data.Map.Strict as M
 import Data.Traversable
@@ -22,7 +22,7 @@ addMemoryTrap m = do
   new_function_map <-
     fmap M.fromList $
     for (M.toList $ functionMap m) $ \(func_sym, func) ->
-      if "__asterius" `BS.isPrefixOf` SBS.fromShort (entityName func_sym)
+      if "__asterius" `BS.isPrefixOf` bytesFS (entityName func_sym)
         then pure (func_sym, func)
         else (func_sym, ) <$> addMemoryTrapDeep func
   pure m {functionMap = new_function_map}

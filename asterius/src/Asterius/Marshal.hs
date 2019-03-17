@@ -11,6 +11,7 @@ module Asterius.Marshal
   ) where
 
 import Asterius.Internals
+import Asterius.Internals.FastString
 import Asterius.Types
 import Asterius.TypesConv
 import Bindings.Binaryen.Raw
@@ -239,13 +240,13 @@ marshalExpression pool m e =
     Call {..} -> do
       os <- forM operands $ marshalExpression pool m
       (ops, osl) <- marshalV pool os
-      tp <- marshalSBS pool (entityName target)
+      tp <- marshalFastString pool (entityName target)
       rts <- marshalReturnTypes callReturnTypes
       c_BinaryenCall m tp ops osl rts
     CallImport {..} -> do
       os <- forM operands $ marshalExpression pool m
       (ops, osl) <- marshalV pool os
-      tp <- marshalSBS pool target'
+      tp <- marshalFastString pool target'
       rts <- marshalReturnTypes callImportReturnTypes
       c_BinaryenCall m tp ops osl rts
     CallIndirect {..} -> do
@@ -304,14 +305,14 @@ marshalMaybeExpression pool m x =
 marshalFunction ::
      Pool
   -> BinaryenModuleRef
-  -> SBS.ShortByteString
+  -> FastString
   -> BinaryenFunctionTypeRef
   -> Function
   -> IO BinaryenFunctionRef
 marshalFunction pool m k ft Function {..} = do
   b <- marshalExpression pool m body
   (vtp, vtl) <- marshalV pool $ map marshalValueType varTypes
-  np <- marshalSBS pool k
+  np <- marshalFastString pool k
   c_BinaryenAddFunction m np ft vtp vtl b
 
 marshalFunctionImport ::
@@ -321,22 +322,22 @@ marshalFunctionImport ::
   -> FunctionImport
   -> IO ()
 marshalFunctionImport pool m ft FunctionImport {..} = do
-  inp <- marshalSBS pool internalName
-  emp <- marshalSBS pool externalModuleName
-  ebp <- marshalSBS pool externalBaseName
+  inp <- marshalFastString pool internalName
+  emp <- marshalFastString pool externalModuleName
+  ebp <- marshalFastString pool externalBaseName
   c_BinaryenAddFunctionImport m inp emp ebp ft
 
 marshalFunctionExport ::
      Pool -> BinaryenModuleRef -> FunctionExport -> IO BinaryenExportRef
 marshalFunctionExport pool m FunctionExport {..} = do
-  inp <- marshalSBS pool internalName
-  enp <- marshalSBS pool externalName
+  inp <- marshalFastString pool internalName
+  enp <- marshalFastString pool externalName
   c_BinaryenAddFunctionExport m inp enp
 
 marshalFunctionTable ::
      Pool -> BinaryenModuleRef -> Int -> FunctionTable -> IO ()
 marshalFunctionTable pool m tbl_slots FunctionTable {..} = do
-  func_name_ptrs <- for tableFunctionNames $ marshalSBS pool
+  func_name_ptrs <- for tableFunctionNames $ marshalFastString pool
   (fnp, fnl) <- marshalV pool func_name_ptrs
   c_BinaryenSetFunctionTableWithOffset
     m

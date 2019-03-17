@@ -100,6 +100,7 @@ module Asterius.EDSL
   ) where
 
 import Asterius.Internals
+import Asterius.Internals.FastString
 import Asterius.Types
 import Control.Monad.Fail
 import Control.Monad.State.Strict
@@ -305,12 +306,11 @@ call' f xs vt = do
   putLVal lr Call {target = f, operands = xs, callReturnTypes = [vt]}
   pure $ getLVal lr
 
-callImport :: SBS.ShortByteString -> [Expression] -> EDSL ()
+callImport :: FastString -> [Expression] -> EDSL ()
 callImport f xs =
   emit CallImport {target' = f, operands = xs, callImportReturnTypes = []}
 
-callImport' ::
-     SBS.ShortByteString -> [Expression] -> ValueType -> EDSL Expression
+callImport' :: FastString -> [Expression] -> ValueType -> EDSL Expression
 callImport' f xs vt = do
   lr <- mutLocal vt
   putLVal

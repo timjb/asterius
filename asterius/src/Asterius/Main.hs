@@ -14,6 +14,7 @@ module Asterius.Main
 
 import Asterius.BuildInfo
 import Asterius.Internals
+import Asterius.Internals.FastString
 import Asterius.Internals.MagicNumber
 import Asterius.Internals.Temp
 import Asterius.JSFFI
@@ -405,9 +406,9 @@ genDefEntry Task {..} =
         (\AsteriusEntitySymbol {..} ->
            mconcat
              [ "export const "
-             , shortByteString entityName
+             , byteString $ bytesFS entityName
              , " = i.wasmInstance.exports."
-             , shortByteString entityName
+             , byteString $ bytesFS entityName
              , "\n"
              ])
         exportFunctions
@@ -450,10 +451,10 @@ ahcLink Task {..} = do
     , "-global-package-db"
     ] <>
     ["-optl--debug" | debug] <>
-    [ "-optl--extra-root-symbol=" <> c8SBS (entityName root_sym)
+    [ "-optl--extra-root-symbol=" <> unpackFS (entityName root_sym)
     | root_sym <- extraRootSymbols
     ] <>
-    [ "-optl--export-function=" <> c8SBS (entityName export_func)
+    [ "-optl--export-function=" <> unpackFS (entityName export_func)
     | export_func <- exportFunctions
     ] <>
     extraGHCFlags <>

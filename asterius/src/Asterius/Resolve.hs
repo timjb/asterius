@@ -13,6 +13,7 @@ module Asterius.Resolve
 
 import Asterius.Builtins
 import Asterius.Internals
+import Asterius.Internals.FastString
 import Asterius.Internals.MagicNumber
 import Asterius.JSFFI
 import Asterius.Passes.All
@@ -26,6 +27,7 @@ import Data.Data (Data, gmapQl)
 import Data.List
 import qualified Data.Map.Lazy as LM
 import qualified Data.Set as S
+import Data.String
 import Foreign
 import GHC.Generics
 import Language.Haskell.GHC.Toolkit.Constants
@@ -144,9 +146,10 @@ mergeSymbols debug store_mod root_syms =
                                            }
                                      , body =
                                          emitErrorMessage [I64] $
-                                         entityName i_staging_sym <>
+                                         fromString $
+                                         unpackFS (entityName i_staging_sym) <>
                                          " failed: it was marked as broken by code generator, with error message: " <>
-                                         showSBS
+                                         show
                                            (functionErrorMap store_mod !
                                             i_staging_sym)
                                      }

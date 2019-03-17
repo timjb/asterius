@@ -16,7 +16,7 @@ module Asterius.Builtins
   ) where
 
 import Asterius.EDSL
-import Asterius.Internals
+import Asterius.Internals.FastString
 import Asterius.Types
 import qualified Data.ByteString.Short as SBS
 import Data.Foldable
@@ -192,9 +192,9 @@ rtsAsteriusModule opts =
 rtsFunctionImports :: Bool -> [FunctionImport]
 rtsFunctionImports debug =
   [ FunctionImport
-    { internalName = "__asterius_" <> op <> "_" <> showSBS ft
+    { internalName = mkFastString $ "__asterius_" <> op <> "_" <> show ft
     , externalModuleName = "Math"
-    , externalBaseName = op
+    , externalBaseName = mkFastString op
     , functionType = FunctionType {paramTypes = [ft], returnTypes = [ft]}
     }
   | ft <- [F32, F64]
@@ -213,9 +213,9 @@ rtsFunctionImports debug =
       ]
   ] <>
   [ FunctionImport
-    { internalName = "__asterius_" <> op <> "_" <> showSBS ft
+    { internalName = mkFastString $ "__asterius_" <> op <> "_" <> show ft
     , externalModuleName = "Math"
-    , externalBaseName = op
+    , externalBaseName = mkFastString op
     , functionType = FunctionType {paramTypes = [ft, ft], returnTypes = [ft]}
     }
   | ft <- [F32, F64]
@@ -529,8 +529,8 @@ byteStringCBits =
     ]
 
 generateRTSWrapper ::
-     SBS.ShortByteString
-  -> SBS.ShortByteString
+     FastString
+  -> FastString
   -> [ValueType]
   -> [ValueType]
   -> (FunctionImport, AsteriusFunction)

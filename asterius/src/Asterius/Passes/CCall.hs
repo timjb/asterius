@@ -8,12 +8,13 @@ module Asterius.Passes.CCall
   ) where
 
 import Asterius.Builtins
+import Asterius.Internals.FastString
 import Asterius.Internals.SYB
 import Asterius.Types
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import Data.String
 import Type.Reflection
 
 {-# INLINABLE maskUnknownCCallTargets #-}
@@ -26,10 +27,11 @@ maskUnknownCCallTargets whoami export_funcs t =
       case t of
         Call {..}
           | not $ has_call_target target ->
-            emitErrorMessage
-              callReturnTypes
-              ("Inside " <> entityName whoami <> ", " <> entityName target <>
-               " failed: unimplemented stub function entered")
+            emitErrorMessage callReturnTypes $
+            fromString $
+            "Inside " <> unpackFS (entityName whoami) <> ", " <>
+            unpackFS (entityName target) <>
+            " failed: unimplemented stub function entered"
           | target == "createIOThread" ->
             case operands of
               [cap, stack_size_w@Load {valueType = I32}, target_closure] ->
@@ -46,6 +48,6 @@ maskUnknownCCallTargets whoami export_funcs t =
     _ -> t
   where
     has_call_target sym =
-      "__asterius" `BS.isPrefixOf` SBS.fromShort (entityName sym) ||
+      "__asterius" `BS.isPrefixOf` bytesFS (entityName sym) ||
       sym `M.member` functionMap (rtsAsteriusModule defaultBuiltinsOptions) ||
       sym `S.member` export_funcs

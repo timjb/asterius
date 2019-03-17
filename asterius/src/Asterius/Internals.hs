@@ -6,6 +6,7 @@
 module Asterius.Internals
   ( IO
   , marshalSBS
+  , marshalFastString
   , marshalV
   , encodeStorable
   , reinterpretCast
@@ -13,13 +14,12 @@ module Asterius.Internals
   , decodeFile
   , tryDecodeFile
   , showSBS
-  , c8SBS
   , (!)
   ) where
 
+import qualified Asterius.Internals.FastString as FS
 import Control.Exception
 import qualified Data.Binary as Binary
-import qualified Data.ByteString.Char8 as CBS
 import qualified Data.ByteString.Short.Internal as SBS
 import qualified Data.Map.Lazy as LM
 import Foreign
@@ -38,6 +38,10 @@ marshalSBS :: Pool -> SBS.ShortByteString -> IO (Ptr CChar)
 marshalSBS pool sbs
   | SBS.null sbs = pure nullPtr
   | otherwise = castPtr <$> pooledNewArray0 pool 0 (SBS.unpack sbs)
+
+{-# INLINE marshalFastString #-}
+marshalFastString :: Pool -> FS.FastString -> IO (Ptr CChar)
+marshalFastString pool fs = marshalSBS pool (FS.toShortByteString fs)
 
 {-# INLINE marshalV #-}
 marshalV :: (Storable a, Num n) => Pool -> [a] -> IO (Ptr a, n)
@@ -106,10 +110,6 @@ tryDecodeFile p = do
 {-# INLINE showSBS #-}
 showSBS :: Show a => a -> SBS.ShortByteString
 showSBS = fromString . show
-
-{-# INLINE c8SBS #-}
-c8SBS :: SBS.ShortByteString -> String
-c8SBS = CBS.unpack . SBS.fromShort
 
 {-# INLINE (!) #-}
 (!) :: (HasCallStack, Ord k, Show k) => LM.Map k v -> k -> v

@@ -17,6 +17,7 @@ module Asterius.CodeGen
 
 import Asterius.Builtins
 import Asterius.Internals
+import Asterius.Internals.FastString
 import Asterius.Resolve
 import Asterius.Types
 import Asterius.TypesConv
@@ -140,7 +141,7 @@ marshalCmmSectionType ::
      AsteriusEntitySymbol -> GHC.Section -> AsteriusStaticsType
 marshalCmmSectionType sym sec@(GHC.Section _ clbl)
   | GHC.isGcPtrLabel clbl = Closure
-  | "_info" `BS.isSuffixOf` SBS.fromShort (entityName sym) = InfoTable
+  | "_info" `BS.isSuffixOf` bytesFS (entityName sym) = InfoTable
   | GHC.isSecConstant sec = ConstBytes
   | otherwise = Bytes
 
@@ -566,11 +567,7 @@ marshalCmmQuotRemPrimCall tmp0 tmp1 qop rop vt qr rr x y = do
     ]
 
 marshalCmmUnMathPrimCall ::
-     SBS.ShortByteString
-  -> ValueType
-  -> GHC.LocalReg
-  -> GHC.CmmExpr
-  -> CodeGen [Expression]
+     String -> ValueType -> GHC.LocalReg -> GHC.CmmExpr -> CodeGen [Expression]
 marshalCmmUnMathPrimCall op vt r x = do
   lr <- marshalTypedCmmLocalReg r vt
   xe <- marshalAndCastCmmExpr x vt
@@ -579,7 +576,7 @@ marshalCmmUnMathPrimCall op vt r x = do
         { unresolvedLocalReg = lr
         , value =
             CallImport
-              { target' = "__asterius_" <> op <> "_" <> showSBS vt
+              { target' = mkFastString $ "__asterius_" <> op <> "_" <> show vt
               , operands = [xe]
               , callImportReturnTypes = [vt]
               }
@@ -587,7 +584,7 @@ marshalCmmUnMathPrimCall op vt r x = do
     ]
 
 marshalCmmBinMathPrimCall ::
-     SBS.ShortByteString
+     String
   -> ValueType
   -> GHC.LocalReg
   -> GHC.CmmExpr
@@ -602,7 +599,7 @@ marshalCmmBinMathPrimCall op vt r x y = do
         { unresolvedLocalReg = lr
         , value =
             CallImport
-              { target' = "__asterius_" <> op <> "_" <> showSBS vt
+              { target' = mkFastString $ "__asterius_" <> op <> "_" <> show vt
               , operands = [xe, ye]
               , callImportReturnTypes = [vt]
               }

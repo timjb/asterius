@@ -10,6 +10,7 @@ module Asterius.NewMarshal
 
 import Asterius.Internals
 import qualified Asterius.Internals.DList as DList
+import Asterius.Internals.FastString
 import Asterius.TypeInfer
 import Asterius.Types
 import Asterius.TypesConv
@@ -37,7 +38,7 @@ instance Exception MarshalError
 
 data ModuleSymbolTable = ModuleSymbolTable
   { functionTypeSymbols :: Map.Map FunctionType Wasm.FunctionTypeIndex
-  , functionSymbols :: Map.Map SBS.ShortByteString Wasm.FunctionIndex
+  , functionSymbols :: Map.Map FastString Wasm.FunctionIndex
   }
 
 makeModuleSymbolTable ::
@@ -114,8 +115,8 @@ makeImportSection Module {..} ModuleSymbolTable {..} =
                        {minLimit = fromIntegral tableSlots, maxLimit = Nothing}
                  }) :
           [ Wasm.Import
-            { moduleName = coerce externalModuleName
-            , importName = coerce externalBaseName
+            { moduleName = coerce $ toShortByteString externalModuleName
+            , importName = coerce $ toShortByteString externalBaseName
             , importDescription =
                 Wasm.ImportFunction $ functionTypeSymbols ! functionType
             }
@@ -141,7 +142,7 @@ makeExportSection Module {..} ModuleSymbolTable {..} =
     Wasm.ExportSection
       { exports =
           [ Wasm.Export
-            { exportName = coerce externalName
+            { exportName = coerce $ toShortByteString externalName
             , exportDescription =
                 Wasm.ExportFunction $ functionSymbols ! internalName
             }

@@ -15,12 +15,12 @@ module Asterius.JSFFI
 
 import Asterius.Builtins
 import Asterius.Internals
+import Asterius.Internals.FastString
 import Asterius.Types
 import Asterius.TypesConv
 import Control.Applicative
 import Control.Monad.State.Strict
 import Data.ByteString.Builder
-import qualified Data.ByteString.Short as SBS
 import Data.Coerce
 import Data.Data (Data, gmapM, gmapQ)
 import Data.Functor.Identity
@@ -284,8 +284,7 @@ processFFI mod_sym = w
                 ( old_state
                     { ffiExportDecls =
                         M.insert
-                          AsteriusEntitySymbol
-                            {entityName = SBS.toShort $ GHC.bytesFS lbl}
+                          AsteriusEntitySymbol {entityName = lbl}
                           FFIExportDecl
                             {ffiFunctionType = ffi_ftype, ffiExportClosure = ""}
                           ffiExportDecls
@@ -361,10 +360,7 @@ addFFIProcessor c = do
                             where GHC.CExport loc_spec _ = fd_fe
                                   GHC.CExportStatic _ lbl _ = GHC.unLoc loc_spec
                                   export_func_name =
-                                    AsteriusEntitySymbol
-                                      { entityName =
-                                          SBS.toShort $ GHC.bytesFS lbl
-                                      }
+                                    AsteriusEntitySymbol {entityName = lbl}
                                   export_closure =
                                     fromString $
                                     asmPpr dflags (GHC.unLoc fd_name) <>
@@ -483,6 +479,7 @@ generateFFIExportFunction FFIExportDecl {..} =
                                              { target =
                                                  AsteriusEntitySymbol
                                                    { entityName =
+                                                       fromShortByteString $
                                                        "rts_mk" <>
                                                        (case ffi_param_t of
                                                           FFI_VAL {..} ->
@@ -524,7 +521,10 @@ generateFFIExportFunction FFIExportDecl {..} =
                   [ Call
                       { target =
                           AsteriusEntitySymbol
-                            {entityName = "rts_get" <> hsTyCon ffi_result_t}
+                            { entityName =
+                                fromShortByteString $
+                                "rts_get" <> hsTyCon ffi_result_t
+                            }
                       , operands =
                           [ Unary TruncUFloat64ToInt64 $
                             CallImport
@@ -612,7 +612,7 @@ generateFFIImportObjectFactory FFIMarshalState {..} =
   mconcat
     (intersperse
        ","
-       [ shortByteString (coerce k) <> ":" <> generateFFILambda ffi_decl
+       [ byteString (bytesFS $ coerce k) <> ":" <> generateFFILambda ffi_decl
        | (k, ffi_decl) <- M.toList ffiImportDecls
        ]) <>
   "}})"
