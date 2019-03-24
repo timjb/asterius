@@ -340,10 +340,7 @@ genLib Task {..} LinkReport {..} =
   , ", infoTables: "
   , genInfoTables infoTableSet
   , ", pinnedStaticClosures: "
-  , genPinnedStaticClosures
-      staticsSymbolMap
-      exportFunctions
-      bundledFFIMarshalState
+  , genPinnedStaticClosures symbolMap exportFunctions bundledFFIMarshalState
   , ", tableSlots: "
   , intDec tableSlots
   , ", staticMBlocks: "
@@ -355,7 +352,7 @@ genLib Task {..} LinkReport {..} =
   , ";\n"
   ]
   where
-    raw_symbol_table = staticsSymbolMap <> functionSymbolMap
+    raw_symbol_table = symbolMap
     symbol_table =
       if fullSymTable || debug
         then raw_symbol_table
@@ -504,10 +501,7 @@ ahcDistMain task@Task {..} (final_m, report) = do
                c_BinaryenSetShrinkLevel 0
                m_ref <-
                  withPool $ \pool ->
-                   OldMarshal.marshalModule
-                     pool
-                     (staticsSymbolMap report <> functionSymbolMap report)
-                     final_m
+                   OldMarshal.marshalModule pool (symbolMap report) final_m
                putStrLn "[INFO] Validating binaryen IR"
                pass_validation <- c_BinaryenModuleValidate m_ref
                when (pass_validation /= 1) $
@@ -529,10 +523,7 @@ ahcDistMain task@Task {..} (final_m, report) = do
       else (do putStrLn "[INFO] Converting linked IR to wasm-toolkit IR"
                let conv_result =
                      runExcept $
-                     NewMarshal.makeModule
-                       tailCalls
-                       (staticsSymbolMap report <> functionSymbolMap report)
-                       final_m
+                     NewMarshal.makeModule tailCalls (symbolMap report) final_m
                r <-
                  case conv_result of
                    Left err ->

@@ -44,7 +44,7 @@ collectAsteriusEntitySymbols t acc =
     _ -> gmapQl (.) id collectAsteriusEntitySymbols t acc
 
 data LinkReport = LinkReport
-  { staticsSymbolMap, functionSymbolMap :: LM.Map AsteriusEntitySymbol Int64
+  { symbolMap :: LM.Map AsteriusEntitySymbol Int64
   , infoTableSet :: [Int64]
   , tableSlots, staticMBlocks :: Int
   , bundledFFIMarshalState :: FFIMarshalState
@@ -55,8 +55,7 @@ instance Binary LinkReport
 instance Semigroup LinkReport where
   r0 <> r1 =
     LinkReport
-      { staticsSymbolMap = staticsSymbolMap r0 <> staticsSymbolMap r1
-      , functionSymbolMap = functionSymbolMap r0 <> functionSymbolMap r1
+      { symbolMap = symbolMap r0 <> symbolMap r1
       , infoTableSet = infoTableSet r0 <> infoTableSet r1
       , tableSlots = 0
       , staticMBlocks = 0
@@ -67,8 +66,7 @@ instance Semigroup LinkReport where
 instance Monoid LinkReport where
   mempty =
     LinkReport
-      { staticsSymbolMap = mempty
-      , functionSymbolMap = mempty
+      { symbolMap = mempty
       , infoTableSet = mempty
       , tableSlots = 0
       , staticMBlocks = 0
@@ -141,13 +139,9 @@ resolveAsteriusModule ::
   -> AsteriusModule
   -> Int64
   -> Int64
-  -> ( Module
-     , LM.Map AsteriusEntitySymbol Int64
-     , LM.Map AsteriusEntitySymbol Int64
-     , Int
-     , Int)
+  -> (Module, LM.Map AsteriusEntitySymbol Int64, Int, Int)
 resolveAsteriusModule debug has_main binaryen bundled_ffi_state export_funcs m_globals_resolved func_start_addr data_start_addr =
-  (new_mod, ss_sym_map, func_sym_map, table_slots, initial_mblocks)
+  (new_mod, all_sym_map, table_slots, initial_mblocks)
   where
     (func_sym_map, last_func_addr) =
       makeFunctionSymbolTable m_globals_resolved func_start_addr
@@ -199,9 +193,8 @@ linkStart ::
 linkStart debug has_main gc_sections binaryen store root_syms export_funcs =
   ( result_m
   , report
-      { staticsSymbolMap = ss_sym_map
-      , functionSymbolMap = func_sym_map
-      , infoTableSet = makeInfoTableSet merged_m ss_sym_map
+      { symbolMap = all_sym_map
+      , infoTableSet = makeInfoTableSet merged_m all_sym_map
       , Asterius.Resolve.tableSlots = tbl_slots
       , staticMBlocks = static_mbs
       })
@@ -217,7 +210,7 @@ linkStart debug has_main gc_sections binaryen store root_syms export_funcs =
              {entityName = "__asterius_jsffi_export_" <> entityName k}
            | k <- export_funcs
            ])
-    (result_m, ss_sym_map, func_sym_map, tbl_slots, static_mbs) =
+    (result_m, all_sym_map, tbl_slots, static_mbs) =
       resolveAsteriusModule
         debug
         has_main
