@@ -71,7 +71,7 @@ data AsteriusCodeGenError
                                ValueType
                                ValueType
   | AssignToImmutableGlobalReg UnresolvedGlobalReg
-  deriving (Eq, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary AsteriusCodeGenError
 
@@ -82,7 +82,7 @@ data AsteriusStatic
                  Int
   | Uninitialized Int
   | Serialized SBS.ShortByteString
-  deriving (Eq, Ord, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary AsteriusStatic
 
@@ -91,14 +91,14 @@ data AsteriusStaticsType
   | Bytes
   | InfoTable
   | Closure
-  deriving (Eq, Ord, Show, Generic, Data)
+  deriving (Eq, Show, Generic, Data)
 
 instance Binary AsteriusStaticsType
 
 data AsteriusStatics = AsteriusStatics
   { staticsType :: AsteriusStaticsType
   , asteriusStatics :: [AsteriusStatic]
-  } deriving (Eq, Ord, Show, Generic, Data)
+  } deriving (Show, Generic, Data)
 
 instance Binary AsteriusStatics
 
@@ -108,7 +108,7 @@ data AsteriusModule = AsteriusModule
   , functionMap :: LM.Map AsteriusEntitySymbol Function
   , functionErrorMap :: LM.Map AsteriusEntitySymbol AsteriusCodeGenError
   , ffiMarshalState :: FFIMarshalState
-  } deriving (Eq, Show, Generic, Data)
+  } deriving (Show, Generic, Data)
 
 instance Binary AsteriusModule where
   put AsteriusModule {..} =
@@ -145,7 +145,10 @@ newtype AsteriusEntitySymbol = AsteriusEntitySymbol
 
 deriving newtype instance Show AsteriusEntitySymbol
 
-deriving instance Data AsteriusEntitySymbol
+instance Data AsteriusEntitySymbol where
+  toConstr _ = error "Asterius.Types.AsteriusEntitySymbol.toConstr"
+  gunfold _ _ _ = error "Asterius.Types.AsteriusEntitySymbol.gunfold"
+  dataTypeOf _ = mkNoRepType "AsteriusEntitySymbol"
 
 data UnresolvedLocalReg
   = UniqueLocalReg Int
@@ -175,7 +178,7 @@ data UnresolvedGlobalReg
   | GCEnter1
   | GCFun
   | BaseReg
-  deriving (Eq, Ord, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary UnresolvedGlobalReg
 
@@ -186,7 +189,7 @@ data Event
   | StackOverflow
   | ThreadBlocked
   | IllegalThreadReturnCode
-  deriving (Eq, Show, Generic, Data, Bounded, Enum)
+  deriving (Show, Generic, Data, Bounded, Enum)
 
 instance Binary Event
 
@@ -253,7 +256,7 @@ data UnaryOp
   | DemoteFloat64
   | ReinterpretInt32
   | ReinterpretInt64
-  deriving (Eq, Ord, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary UnaryOp
 
@@ -334,14 +337,14 @@ data BinaryOp
   | LeFloat64
   | GtFloat64
   | GeFloat64
-  deriving (Eq, Ord, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary BinaryOp
 
 data HostOp
   = CurrentMemory
   | GrowMemory
-  deriving (Eq, Ord, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary HostOp
 
@@ -398,7 +401,7 @@ data Expression
   | UnresolvedGetLocal { unresolvedLocalReg :: UnresolvedLocalReg }
   | UnresolvedSetLocal { unresolvedLocalReg :: UnresolvedLocalReg
                        , value :: Expression }
-  deriving (Eq, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary Expression
 
@@ -406,58 +409,58 @@ data Function = Function
   { functionType :: FunctionType
   , varTypes :: [ValueType]
   , body :: Expression
-  } deriving (Eq, Show, Generic, Data)
+  } deriving (Show, Generic, Data)
 
 instance Binary Function
 
 data FunctionImport = FunctionImport
   { internalName, externalModuleName, externalBaseName :: SBS.ShortByteString
   , functionType :: FunctionType
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary FunctionImport
 
 data TableImport = TableImport
   { externalModuleName, externalBaseName :: SBS.ShortByteString
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary TableImport
 
 data MemoryImport = MemoryImport
   { externalModuleName, externalBaseName :: SBS.ShortByteString
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary MemoryImport
 
 data FunctionExport = FunctionExport
   { internalName, externalName :: SBS.ShortByteString
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary FunctionExport
 
 newtype TableExport = TableExport
   { externalName :: SBS.ShortByteString
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary TableExport
 
 newtype MemoryExport = MemoryExport
   { externalName :: SBS.ShortByteString
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary MemoryExport
 
 data FunctionTable = FunctionTable
   { tableFunctionNames :: [SBS.ShortByteString]
   , tableOffset :: BinaryenIndex
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary FunctionTable
 
 data DataSegment = DataSegment
   { content :: SBS.ShortByteString
   , offset :: Int32
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary DataSegment
 
@@ -473,14 +476,14 @@ data Module = Module
   , memoryImport :: MemoryImport
   , memoryExport :: MemoryExport
   , memoryMBlocks :: Int
-  } deriving (Eq, Show, Data, Generic)
+  } deriving (Show, Generic, Data)
 
 instance Binary Module
 
 data RelooperAddBlock
   = AddBlock { code :: Expression }
   | AddBlockWithSwitch { code, condition :: Expression }
-  deriving (Eq, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary RelooperAddBlock
 
@@ -489,14 +492,14 @@ data RelooperAddBranch
               , addBranchCondition :: Maybe Expression }
   | AddBranchForSwitch { to :: SBS.ShortByteString
                        , indexes :: [BinaryenIndex] }
-  deriving (Eq, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary RelooperAddBranch
 
 data RelooperBlock = RelooperBlock
   { addBlock :: RelooperAddBlock
   , addBranches :: [RelooperAddBranch]
-  } deriving (Eq, Show, Generic, Data)
+  } deriving (Show, Generic, Data)
 
 instance Binary RelooperBlock
 
@@ -504,14 +507,14 @@ data RelooperRun = RelooperRun
   { entry :: SBS.ShortByteString
   , blockMap :: LM.Map SBS.ShortByteString RelooperBlock
   , labelHelper :: BinaryenIndex
-  } deriving (Eq, Show, Generic, Data)
+  } deriving (Show, Generic, Data)
 
 instance Binary RelooperRun
 
 data Chunk a
   = Lit String
   | Field a
-  deriving (Eq, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary a => Binary (Chunk a)
 
@@ -520,35 +523,35 @@ data FFIValueType
             , hsTyCon :: SBS.ShortByteString
             , signed :: Bool }
   | FFI_JSVAL
-  deriving (Eq, Show, Generic, Data)
+  deriving (Show, Generic, Data)
 
 instance Binary FFIValueType
 
 data FFIFunctionType = FFIFunctionType
   { ffiParamTypes, ffiResultTypes :: [FFIValueType]
   , ffiInIO :: Bool
-  } deriving (Eq, Show, Generic, Data)
+  } deriving (Show, Generic, Data)
 
 instance Binary FFIFunctionType
 
 data FFIImportDecl = FFIImportDecl
   { ffiFunctionType :: FFIFunctionType
   , ffiSourceChunks :: [Chunk Int]
-  } deriving (Eq, Show, Generic, Data)
+  } deriving (Show, Generic, Data)
 
 instance Binary FFIImportDecl
 
 data FFIExportDecl = FFIExportDecl
   { ffiFunctionType :: FFIFunctionType
   , ffiExportClosure :: AsteriusEntitySymbol
-  } deriving (Eq, Show, Generic, Data)
+  } deriving (Show, Generic, Data)
 
 instance Binary FFIExportDecl
 
 data FFIMarshalState = FFIMarshalState
   { ffiImportDecls :: LM.Map AsteriusEntitySymbol FFIImportDecl
   , ffiExportDecls :: LM.Map AsteriusEntitySymbol FFIExportDecl
-  } deriving (Eq, Show, Data)
+  } deriving (Show, Data)
 
 instance Semigroup FFIMarshalState where
   s0 <> s1 =
