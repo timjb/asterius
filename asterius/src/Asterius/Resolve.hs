@@ -154,11 +154,10 @@ resolveAsteriusModule ::
   -> ( Module
      , LM.Map AsteriusEntitySymbol Int64
      , LM.Map AsteriusEntitySymbol Int64
-     , [Event]
      , Int
      , Int)
 resolveAsteriusModule debug has_main binaryen bundled_ffi_state export_funcs m_globals_resolved func_start_addr data_start_addr =
-  (new_mod, ss_sym_map, func_sym_map, err_msgs, table_slots, initial_mblocks)
+  (new_mod, ss_sym_map, func_sym_map, table_slots, initial_mblocks)
   where
     (func_sym_map, last_func_addr) =
       makeFunctionSymbolTable m_globals_resolved func_start_addr
@@ -197,7 +196,6 @@ resolveAsteriusModule debug has_main binaryen bundled_ffi_state export_funcs m_g
         , memoryExport = MemoryExport {externalName = "memory"}
         , memoryMBlocks = initial_mblocks
         }
-    err_msgs = enumFromTo minBound maxBound
 
 linkStart ::
      Bool
@@ -207,10 +205,9 @@ linkStart ::
   -> AsteriusModule
   -> S.Set AsteriusEntitySymbol
   -> [AsteriusEntitySymbol]
-  -> (Module, [Event], LinkReport)
+  -> (Module, LinkReport)
 linkStart debug has_main gc_sections binaryen store root_syms export_funcs =
   ( result_m
-  , err_msgs
   , report
       { staticsSymbolMap = ss_sym_map
       , functionSymbolMap = func_sym_map
@@ -230,7 +227,7 @@ linkStart debug has_main gc_sections binaryen store root_syms export_funcs =
              {entityName = "__asterius_jsffi_export_" <> entityName k}
            | k <- export_funcs
            ])
-    (result_m, ss_sym_map, func_sym_map, err_msgs, tbl_slots, static_mbs) =
+    (result_m, ss_sym_map, func_sym_map, tbl_slots, static_mbs) =
       resolveAsteriusModule
         debug
         has_main

@@ -2,6 +2,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Asterius.Main
   ( Target(..)
@@ -318,13 +319,18 @@ genWasm Task {..} _ =
   where
     out_wasm = string7 $ show $ outputBaseName <.> "wasm"
 
-genLib :: Task -> LinkReport -> [Event] -> Builder
-genLib Task {..} LinkReport {..} err_msgs =
+genLib :: Task -> LinkReport -> Builder
+genLib Task {..} LinkReport {..} =
   mconcat $
   [ "import * as rts from \"./rts.mjs\";\n"
   , "export const newInstance = module => \n"
   , "rts.newAsteriusInstance({events: ["
-  , mconcat (intersperse "," [string7 $ show $ show msg | msg <- err_msgs])
+  , mconcat
+      (intersperse
+         ","
+         [ string7 $ show $ show msg
+         | msg <- enumFromTo @Event minBound maxBound
+         ])
   , "], module: module"
   ] <>
   [ ", jsffiFactory: "
@@ -445,7 +451,7 @@ genHTML Task {..} =
 builderWriteFile :: FilePath -> Builder -> IO ()
 builderWriteFile p b = withBinaryFile p WriteMode $ \h -> hPutBuilder h b
 
-ahcLink :: Task -> IO (Asterius.Types.Module, [Event], LinkReport)
+ahcLink :: Task -> IO (Asterius.Types.Module, LinkReport)
 ahcLink Task {..} = do
   ld_output <- temp (takeBaseName inputHS)
   putStrLn $ "[INFO] Compiling " <> inputHS <> " to WebAssembly"
@@ -472,8 +478,8 @@ ahcLink Task {..} = do
   removeFile ld_output
   pure r
 
-ahcDistMain :: Task -> (Asterius.Types.Module, [Event], LinkReport) -> IO ()
-ahcDistMain task@Task {..} (final_m, err_msgs, report) = do
+ahcDistMain :: Task -> (Asterius.Types.Module, LinkReport) -> IO ()
+ahcDistMain task@Task {..} (final_m, report) = do
   let out_package_json = outputDirectory </> "package.json"
       out_rts_settings = outputDirectory </> "rts.settings.mjs"
       out_wasm = outputDirectory </> outputBaseName <.> "wasm"
@@ -552,7 +558,7 @@ ahcDistMain task@Task {..} (final_m, err_msgs, report) = do
   putStrLn $ "[INFO] Writing JavaScript loader module to " <> show out_wasm_lib
   builderWriteFile out_wasm_lib $ genWasm task m_bin
   putStrLn $ "[INFO] Writing JavaScript lib module to " <> show out_lib
-  builderWriteFile out_lib $ genLib task report err_msgs
+  builderWriteFile out_lib $ genLib task report
   putStrLn $ "[INFO] Writing JavaScript entry module to " <> show out_entry
   case inputEntryMJS of
     Just in_entry -> copyFile in_entry out_entry
