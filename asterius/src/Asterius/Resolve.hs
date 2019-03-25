@@ -17,6 +17,7 @@ import Asterius.JSFFI
 import Asterius.Passes.DataSymbolTable
 import Asterius.Passes.FunctionSymbolTable
 import Asterius.Types
+import Control.DeepSeq
 import Data.Binary
 import Data.Data (Data, gmapQl)
 import Data.List
@@ -51,6 +52,8 @@ data LinkReport = LinkReport
   } deriving (Generic, Show)
 
 instance Binary LinkReport
+
+instance NFData LinkReport
 
 instance Semigroup LinkReport where
   r0 <> r1 =
