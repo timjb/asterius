@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -15,6 +17,7 @@ import Asterius.Passes.Relooper
 import Asterius.TypeInfer
 import Asterius.Types
 import Asterius.TypesConv
+import Control.DeepSeq
 import Control.Exception
 import Control.Monad.Except
 import Data.Bits
@@ -26,6 +29,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Traversable
 import Data.Word
+import GHC.Generics
 import Language.Haskell.GHC.Toolkit.Constants
 import qualified Language.WebAssembly.WireFormat as Wasm
 
@@ -35,7 +39,7 @@ data MarshalError
   | InvalidParameterType
   | InvalidLocalType
   | UnsupportedExpression Expression
-  deriving (Show)
+  deriving (Generic, NFData, Show)
 
 instance Exception MarshalError
 
