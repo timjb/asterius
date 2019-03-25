@@ -49,6 +49,7 @@ module Asterius.Types
 
 import Asterius.Internals.Binary
 import Bindings.Binaryen.Raw hiding (RelooperBlock)
+import Control.DeepSeq
 import Control.Exception
 import Data.Binary
 import qualified Data.ByteString.Short as SBS
@@ -77,6 +78,8 @@ instance Binary AsteriusCodeGenError
 
 instance Exception AsteriusCodeGenError
 
+instance NFData AsteriusCodeGenError
+
 data AsteriusStatic
   = SymbolStatic AsteriusEntitySymbol
                  Int
@@ -85,6 +88,8 @@ data AsteriusStatic
   deriving (Show, Generic, Data)
 
 instance Binary AsteriusStatic
+
+instance NFData AsteriusStatic
 
 data AsteriusStaticsType
   = ConstBytes
@@ -95,12 +100,16 @@ data AsteriusStaticsType
 
 instance Binary AsteriusStaticsType
 
+instance NFData AsteriusStaticsType
+
 data AsteriusStatics = AsteriusStatics
   { staticsType :: AsteriusStaticsType
   , asteriusStatics :: [AsteriusStatic]
   } deriving (Show, Generic, Data)
 
 instance Binary AsteriusStatics
+
+instance NFData AsteriusStatics
 
 data AsteriusModule = AsteriusModule
   { staticsMap :: LM.Map AsteriusEntitySymbol AsteriusStatics
@@ -119,6 +128,8 @@ instance Binary AsteriusModule where
   get =
     AsteriusModule <$> lazyMapGet <*> lazyMapGet <*> lazyMapGet <*> lazyMapGet <*>
     get
+
+instance NFData AsteriusModule
 
 instance Semigroup AsteriusModule where
   AsteriusModule sm0 se0 fm0 fe0 mod_ffi_state0 <> AsteriusModule sm1 se1 fm1 fe1 mod_ffi_state1 =
@@ -139,9 +150,13 @@ data AsteriusModuleSymbol = AsteriusModuleSymbol
 
 instance Binary AsteriusModuleSymbol
 
+instance NFData AsteriusModuleSymbol
+
 newtype AsteriusEntitySymbol = AsteriusEntitySymbol
   { entityName :: SBS.ShortByteString
-  } deriving (Eq, Ord, IsString, Binary, Semigroup)
+  } deriving (Eq, Ord, IsString, Binary, Semigroup, Generic)
+
+instance NFData AsteriusEntitySymbol
 
 deriving newtype instance Show AsteriusEntitySymbol
 
@@ -160,6 +175,8 @@ data UnresolvedLocalReg
   deriving (Eq, Ord, Show, Generic, Data)
 
 instance Binary UnresolvedLocalReg
+
+instance NFData UnresolvedLocalReg
 
 data UnresolvedGlobalReg
   = VanillaReg Int
@@ -182,6 +199,8 @@ data UnresolvedGlobalReg
 
 instance Binary UnresolvedGlobalReg
 
+instance NFData UnresolvedGlobalReg
+
 data Event
   = IllegalSchedulerStatusCode
   | SchedulerReenteredFromHaskell
@@ -193,6 +212,8 @@ data Event
 
 instance Binary Event
 
+instance NFData Event
+
 data ValueType
   = I32
   | I64
@@ -202,11 +223,15 @@ data ValueType
 
 instance Binary ValueType
 
+instance NFData ValueType
+
 data FunctionType = FunctionType
   { paramTypes, returnTypes :: [ValueType]
   } deriving (Eq, Ord, Show, Generic, Data)
 
 instance Binary FunctionType
+
+instance NFData FunctionType
 
 data UnaryOp
   = ClzInt32
@@ -259,6 +284,8 @@ data UnaryOp
   deriving (Show, Generic, Data)
 
 instance Binary UnaryOp
+
+instance NFData UnaryOp
 
 data BinaryOp
   = AddInt32
@@ -341,12 +368,16 @@ data BinaryOp
 
 instance Binary BinaryOp
 
+instance NFData BinaryOp
+
 data HostOp
   = CurrentMemory
   | GrowMemory
   deriving (Show, Generic, Data)
 
 instance Binary HostOp
+
+instance NFData HostOp
 
 data Expression
   = Block { name :: SBS.ShortByteString
@@ -405,6 +436,8 @@ data Expression
 
 instance Binary Expression
 
+instance NFData Expression
+
 data Function = Function
   { functionType :: FunctionType
   , varTypes :: [ValueType]
@@ -413,6 +446,8 @@ data Function = Function
 
 instance Binary Function
 
+instance NFData Function
+
 data FunctionImport = FunctionImport
   { internalName, externalModuleName, externalBaseName :: SBS.ShortByteString
   , functionType :: FunctionType
@@ -420,11 +455,15 @@ data FunctionImport = FunctionImport
 
 instance Binary FunctionImport
 
+instance NFData FunctionImport
+
 data TableImport = TableImport
   { externalModuleName, externalBaseName :: SBS.ShortByteString
   } deriving (Show, Generic, Data)
 
 instance Binary TableImport
+
+instance NFData TableImport
 
 data MemoryImport = MemoryImport
   { externalModuleName, externalBaseName :: SBS.ShortByteString
@@ -432,11 +471,15 @@ data MemoryImport = MemoryImport
 
 instance Binary MemoryImport
 
+instance NFData MemoryImport
+
 data FunctionExport = FunctionExport
   { internalName, externalName :: SBS.ShortByteString
   } deriving (Show, Generic, Data)
 
 instance Binary FunctionExport
+
+instance NFData FunctionExport
 
 newtype TableExport = TableExport
   { externalName :: SBS.ShortByteString
@@ -444,11 +487,15 @@ newtype TableExport = TableExport
 
 instance Binary TableExport
 
+instance NFData TableExport
+
 newtype MemoryExport = MemoryExport
   { externalName :: SBS.ShortByteString
   } deriving (Show, Generic, Data)
 
 instance Binary MemoryExport
+
+instance NFData MemoryExport
 
 data FunctionTable = FunctionTable
   { tableFunctionNames :: [SBS.ShortByteString]
@@ -457,12 +504,16 @@ data FunctionTable = FunctionTable
 
 instance Binary FunctionTable
 
+instance NFData FunctionTable
+
 data DataSegment = DataSegment
   { content :: SBS.ShortByteString
   , offset :: Int32
   } deriving (Show, Generic, Data)
 
 instance Binary DataSegment
+
+instance NFData DataSegment
 
 data Module = Module
   { functionMap' :: LM.Map SBS.ShortByteString Function
@@ -480,12 +531,16 @@ data Module = Module
 
 instance Binary Module
 
+instance NFData Module
+
 data RelooperAddBlock
   = AddBlock { code :: Expression }
   | AddBlockWithSwitch { code, condition :: Expression }
   deriving (Show, Generic, Data)
 
 instance Binary RelooperAddBlock
+
+instance NFData RelooperAddBlock
 
 data RelooperAddBranch
   = AddBranch { to :: SBS.ShortByteString
@@ -496,12 +551,16 @@ data RelooperAddBranch
 
 instance Binary RelooperAddBranch
 
+instance NFData RelooperAddBranch
+
 data RelooperBlock = RelooperBlock
   { addBlock :: RelooperAddBlock
   , addBranches :: [RelooperAddBranch]
   } deriving (Show, Generic, Data)
 
 instance Binary RelooperBlock
+
+instance NFData RelooperBlock
 
 data RelooperRun = RelooperRun
   { entry :: SBS.ShortByteString
@@ -511,12 +570,16 @@ data RelooperRun = RelooperRun
 
 instance Binary RelooperRun
 
+instance NFData RelooperRun
+
 data Chunk a
   = Lit String
   | Field a
   deriving (Show, Generic, Data)
 
 instance Binary a => Binary (Chunk a)
+
+instance NFData a => NFData (Chunk a)
 
 data FFIValueType
   = FFI_VAL { ffiWasmValueType, ffiJSValueType :: ValueType
@@ -527,12 +590,16 @@ data FFIValueType
 
 instance Binary FFIValueType
 
+instance NFData FFIValueType
+
 data FFIFunctionType = FFIFunctionType
   { ffiParamTypes, ffiResultTypes :: [FFIValueType]
   , ffiInIO :: Bool
   } deriving (Show, Generic, Data)
 
 instance Binary FFIFunctionType
+
+instance NFData FFIFunctionType
 
 data FFIImportDecl = FFIImportDecl
   { ffiFunctionType :: FFIFunctionType
@@ -541,6 +608,8 @@ data FFIImportDecl = FFIImportDecl
 
 instance Binary FFIImportDecl
 
+instance NFData FFIImportDecl
+
 data FFIExportDecl = FFIExportDecl
   { ffiFunctionType :: FFIFunctionType
   , ffiExportClosure :: AsteriusEntitySymbol
@@ -548,10 +617,12 @@ data FFIExportDecl = FFIExportDecl
 
 instance Binary FFIExportDecl
 
+instance NFData FFIExportDecl
+
 data FFIMarshalState = FFIMarshalState
   { ffiImportDecls :: LM.Map AsteriusEntitySymbol FFIImportDecl
   , ffiExportDecls :: LM.Map AsteriusEntitySymbol FFIExportDecl
-  } deriving (Show, Data)
+  } deriving (Show, Generic, Data)
 
 instance Semigroup FFIMarshalState where
   s0 <> s1 =
@@ -567,3 +638,5 @@ instance Binary FFIMarshalState where
   put FFIMarshalState {..} =
     lazyMapPut ffiImportDecls *> lazyMapPut ffiExportDecls
   get = FFIMarshalState <$> lazyMapGet <*> lazyMapGet
+
+instance NFData FFIMarshalState
