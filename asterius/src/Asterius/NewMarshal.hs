@@ -1,4 +1,3 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -45,8 +44,7 @@ data ModuleSymbolTable = ModuleSymbolTable
   , functionSymbols :: Map.Map SBS.ShortByteString Wasm.FunctionIndex
   }
 
-makeModuleSymbolTable ::
-     MonadError MarshalError m => Module -> m ModuleSymbolTable
+makeModuleSymbolTable :: Module -> Either MarshalError ModuleSymbolTable
 makeModuleSymbolTable m@Module {..} = do
   let _has_dup l = length l /= length (nub l)
       _func_import_syms =
@@ -75,7 +73,7 @@ makeValueType vt =
     F64 -> Wasm.F64
 
 makeTypeSection ::
-     MonadError MarshalError m => Module -> ModuleSymbolTable -> m Wasm.Section
+     Module -> ModuleSymbolTable -> Either MarshalError Wasm.Section
 makeTypeSection Module {} ModuleSymbolTable {..} = do
   _func_types <-
     for (Map.keys functionTypeSymbols) $ \FunctionType {..} -> do
@@ -87,7 +85,7 @@ makeTypeSection Module {} ModuleSymbolTable {..} = do
   pure Wasm.TypeSection {types = _func_types}
 
 makeImportSection ::
-     MonadError MarshalError m => Module -> ModuleSymbolTable -> m Wasm.Section
+     Module -> ModuleSymbolTable -> Either MarshalError Wasm.Section
 makeImportSection Module {..} ModuleSymbolTable {..} =
   pure
     Wasm.ImportSection
@@ -129,7 +127,7 @@ makeImportSection Module {..} ModuleSymbolTable {..} =
       }
 
 makeFunctionSection ::
-     MonadError MarshalError m => Module -> ModuleSymbolTable -> m Wasm.Section
+     Module -> ModuleSymbolTable -> Either MarshalError Wasm.Section
 makeFunctionSection Module {..} ModuleSymbolTable {..} =
   pure
     Wasm.FunctionSection
@@ -140,7 +138,7 @@ makeFunctionSection Module {..} ModuleSymbolTable {..} =
       }
 
 makeExportSection ::
-     MonadError MarshalError m => Module -> ModuleSymbolTable -> m Wasm.Section
+     Module -> ModuleSymbolTable -> Either MarshalError Wasm.Section
 makeExportSection Module {..} ModuleSymbolTable {..} =
   pure
     Wasm.ExportSection
@@ -169,7 +167,7 @@ makeExportSection Module {..} ModuleSymbolTable {..} =
       }
 
 makeElementSection ::
-     MonadError MarshalError m => Module -> ModuleSymbolTable -> m Wasm.Section
+     Module -> ModuleSymbolTable -> Either MarshalError Wasm.Section
 makeElementSection Module {..} ModuleSymbolTable {..} =
   pure
     Wasm.ElementSection
@@ -254,14 +252,13 @@ lookupLocalContext LocalContext {..} i =
 
 -- TODO: reduce infer usage
 makeInstructions ::
-     MonadError MarshalError m
-  => Bool
+     Bool
   -> Map.Map AsteriusEntitySymbol Int64
   -> ModuleSymbolTable
   -> DeBruijnContext
   -> LocalContext
   -> Expression
-  -> m (DList.DList Wasm.Instruction)
+  -> Either MarshalError (DList.DList Wasm.Instruction)
 makeInstructions tail_calls sym_map _module_symtable@ModuleSymbolTable {..} _de_bruijn_ctx _local_ctx expr =
   case expr of
     Block {..}
@@ -765,14 +762,13 @@ makeInstructions tail_calls sym_map _module_symtable@ModuleSymbolTable {..} _de_
     _ -> throwError $ UnsupportedExpression expr
 
 makeInstructionsMaybe ::
-     MonadError MarshalError m
-  => Bool
+     Bool
   -> Map.Map AsteriusEntitySymbol Int64
   -> ModuleSymbolTable
   -> DeBruijnContext
   -> LocalContext
   -> Maybe Expression
-  -> m (DList.DList Wasm.Instruction)
+  -> Either MarshalError (DList.DList Wasm.Instruction)
 makeInstructionsMaybe tail_calls sym_map _module_symtable _de_bruijn_ctx _local_ctx m_expr =
   case m_expr of
     Just expr ->
@@ -786,12 +782,11 @@ makeInstructionsMaybe tail_calls sym_map _module_symtable _de_bruijn_ctx _local_
     _ -> pure mempty
 
 makeCodeSection ::
-     MonadError MarshalError m
-  => Bool
+     Bool
   -> Map.Map AsteriusEntitySymbol Int64
   -> Module
   -> ModuleSymbolTable
-  -> m Wasm.Section
+  -> Either MarshalError Wasm.Section
 makeCodeSection tail_calls sym_map _mod@Module {..} _module_symtable =
   fmap Wasm.CodeSection $
   for (Map.elems functionMap') $ \_func@Function {..} -> do
@@ -820,7 +815,7 @@ makeCodeSection tail_calls sym_map _mod@Module {..} _module_symtable =
         }
 
 makeDataSection ::
-     MonadError MarshalError m => Module -> ModuleSymbolTable -> m Wasm.Section
+     Module -> ModuleSymbolTable -> Either MarshalError Wasm.Section
 makeDataSection Module {..} _module_symtable = do
   segs <-
     for memorySegments $ \DataSegment {..} ->
@@ -834,11 +829,10 @@ makeDataSection Module {..} _module_symtable = do
   pure Wasm.DataSection {dataSegments = segs}
 
 makeModule ::
-     MonadError MarshalError m
-  => Bool
+     Bool
   -> Map.Map AsteriusEntitySymbol Int64
   -> Module
-  -> m Wasm.Module
+  -> Either MarshalError Wasm.Module
 makeModule tail_calls sym_map m = do
   _module_symtable <- makeModuleSymbolTable m
   _type_sec <- makeTypeSection m _module_symtable

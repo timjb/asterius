@@ -30,7 +30,6 @@ import Asterius.Types
   )
 import Bindings.Binaryen.Raw
 import Control.Monad
-import Control.Monad.Except
 import Data.Binary.Get
 import Data.Binary.Put
 import Data.ByteString.Builder
@@ -522,7 +521,6 @@ ahcDistMain task@Task {..} (final_m, report) = do
                pure m_bin)
       else (do putStrLn "[INFO] Converting linked IR to wasm-toolkit IR"
                let conv_result =
-                     runExcept $
                      NewMarshal.makeModule tailCalls (symbolMap report) final_m
                r <-
                  case conv_result of
