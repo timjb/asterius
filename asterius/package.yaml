@@ -204,3 +204,12 @@ tests:
     ghc-options: -threaded -rtsopts
     dependencies:
       - asterius
+
+benchmarks:
+  asterius-bench:
+    source-dirs: bench
+    main: asterius-bench.hs
+    ghc-options: -threaded -rtsopts
+    dependencies:
+      - asterius
+      - gauge
