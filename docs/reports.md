@@ -2,6 +2,52 @@
 
 This page maintains a list of weekly status reports for the project.
 
+## 2019-04-01
+
+Covers last week.
+
+Ongoing work:
+
+* Refactored `inline-js-core`/`inline-js` and implemented the binary IPC interface. This is a part of the work on the `node` side of `iserv`.
+    * `inline-js` was based on a textual IPC interface using JSON messages via `readline`. When writing `iserv` logic this proved to be an annoyance; we'd like to reuse the `Message` type and its `Binary` instance in `libiserv`, instead of coming up with a JSON schema for every message; also it doesn't play nice with messages with blobs. Now `inline-js-core` directly transmits binary IPC, and it can be backed by any backend (e.g. stdio or network).
+* `inline-js-core` now supports evaluating ES6 module code containing dynamic `import()`s. This is critical to `iserv` implementation since our code generator also generates ES6 modules.
+* Did some linker profiling and revealed that repeated serialization is a previously undiscovered bottleneck:
+    * In `ahc-ld`, we pick up all library archives and object files, emit a persistent "linker state" as a pseudo-executable, which is later read by `ahc-dist` to produce executable wasm/js.
+    * When no-DCE mode is on, the linker state contains data/functions in all libraries, and although we have some degree of lazy-loading, we can't lazily save things without forcing their evaluation. Thus come the extra costs.
+
+Estimated work for this week:
+
+* Support evaluating static `import` declarations in `inline-js-core`, since they are included in our js stubs. If proven to be hard, we add a switch in the code generator to only emit `import()`s instead.
+* Implement the `iserv` message handlers in node.
+
+## 2019-03-25
+
+Covers last week.
+
+Ongoing work:
+
+* Implemented the linker's "no-DCE" mode. Dead code elimination is now optional and can be switched off via `--no-gc-sections`, and this is preferrable behavior for dynamic linking. Note that for regular linking in `ahc-link`, no-DCE mode takes considerably longer and emits a `.wasm` as large as 40MB.
+* Removed all "rewriting passes" for code in the linker.
+    * Previously, the linker grabs a self-contained set of data/functions, perform whole-program AST rewritings for several times, then feed the output to `wasm-toolkit`/`binaryen` backend to emit real WebAssembly binaries.
+    * By removing these passes, there's a roughly 75% speedup measured in `fib` for no-DCE mode, around one minute from loading all archives to `node` compiling and running output code.
+    * Another advantage of removing those passes: there's now a lot less linker state to keep track of, thus clearing up the last mile path to fully incremental linking.
+    * Minor downsides to the linker refactorings:
+        * We used to have an "EmitEvent" primitive in our IR which allows embedding any Haskell string as an "event" and emit it when using the monadic EDSL to construct WebAssembly code. This mechanism now degraded from allowing any string to an enumerable set of events.
+        * When the linker found a function which contains a compile-time error message, it used to emit a stub function which reports that message and crashes at runtime. Now we don't emit those anymore, and when such a function is called at runtime, the compile-time error message is not reported.
+
+Other work, when the main thread stalled:
+
+* Implemented the WebAssembly tail call opcodes in `wasm-toolkit` and the tail-calls mode in asterius, enabled with `--tail-calls`, tested on CI with V8 team's latest nodejs build.
+    * The tail-calls mode gets rid of trampolining during Haskell/Cmm execution. When the user is in full control of the execution platform and doesn't mind adding a V8 flag to enable tail calls, this should result in better performance.
+    * It's unsupported by the binaryen backend yet, but we managed to re-enable the binaryen relooper, which at this moment still emits better binary than our own relooper. It seems the binaryen relooper works fine only if no value is returned from any basic block. Back when we didn't roll our own relooper and didn't realize this, it was a constant source of undefined behavior and debugging nightmares.
+* Simplified the `binaryen` build script to not rely on `ar -M`. Got rid of CPP usage and fixed a build warning on non-macOS platforms.
+
+Planned work for the week:
+
+* Conclude all linker work.
+    * All performance potential for the current linker architecture is possibly squeezed out now. It's not as fast as we want, but it's easily cachable. Once we have a fully persistent linker state, we can cache and reuse it on the first TH run, so it won't take minutes to run splices.
+* Finish the `node` side of `iserv` logic and get preliminary TH support.
+
 ## 2019-03-18
 
 Covers last week.
