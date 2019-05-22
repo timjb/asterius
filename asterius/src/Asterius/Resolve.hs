@@ -14,6 +14,7 @@ module Asterius.Resolve
 import Asterius.Builtins
 import Asterius.Internals.MagicNumber
 import Asterius.JSFFI
+import Asterius.MemoryTrap
 import Asterius.Passes.DataSymbolTable
 import Asterius.Passes.FunctionSymbolTable
 import Asterius.Types
@@ -44,8 +45,7 @@ collectAsteriusEntitySymbols t acc =
     _ -> gmapQl (.) id collectAsteriusEntitySymbols t acc
 
 data LinkReport = LinkReport
-  { unavailableSymbols :: S.Set AsteriusEntitySymbol
-  , staticsSymbolMap, functionSymbolMap :: LM.Map AsteriusEntitySymbol Int64
+  { staticsSymbolMap, functionSymbolMap :: LM.Map AsteriusEntitySymbol Int64
   , infoTableSet :: [Int64]
   , tableSlots, staticMBlocks :: Int
   , bundledFFIMarshalState :: FFIMarshalState
@@ -56,8 +56,7 @@ instance Binary LinkReport
 instance Semigroup LinkReport where
   r0 <> r1 =
     LinkReport
-      { unavailableSymbols = unavailableSymbols r0 <> unavailableSymbols r1
-      , staticsSymbolMap = staticsSymbolMap r0 <> staticsSymbolMap r1
+      { staticsSymbolMap = staticsSymbolMap r0 <> staticsSymbolMap r1
       , functionSymbolMap = functionSymbolMap r0 <> functionSymbolMap r1
       , infoTableSet = infoTableSet r0 <> infoTableSet r1
       , tableSlots = 0
@@ -69,8 +68,7 @@ instance Semigroup LinkReport where
 instance Monoid LinkReport where
   mempty =
     LinkReport
-      { unavailableSymbols = mempty
-      , staticsSymbolMap = mempty
+      { staticsSymbolMap = mempty
       , functionSymbolMap = mempty
       , infoTableSet = mempty
       , tableSlots = 0
@@ -85,7 +83,7 @@ mergeSymbols ::
   -> S.Set AsteriusEntitySymbol
   -> (AsteriusModule, LinkReport)
 mergeSymbols _ gc_sections store_mod root_syms
-  | not gc_sections = (store_mod, final_rep {bundledFFIMarshalState = ffi_all})
+  | not gc_sections = (store_mod, mempty {bundledFFIMarshalState = ffi_all})
   | otherwise = (final_m, mempty {bundledFFIMarshalState = ffi_this})
   where
     ffi_all = ffiMarshalState store_mod
@@ -95,21 +93,19 @@ mergeSymbols _ gc_sections store_mod root_syms
             flip LM.filterWithKey (ffiImportDecls ffi_all) $ \k _ ->
               (k <> "_wrapper") `LM.member` functionMap final_m
         }
-    (_, _, final_rep, final_m) = go (root_syms, S.empty, mempty, mempty)
-    go i@(i_staging_syms, _, _, _)
+    (_, _, final_m) = go (root_syms, S.empty, mempty)
+    go i@(i_staging_syms, _, _)
       | S.null i_staging_syms = i
       | otherwise = go $ iter i
-    iter (i_staging_syms, i_acc_syms, i_rep, i_m) =
-      (o_staging_syms, o_acc_syms, o_rep, o_m)
+    iter (i_staging_syms, i_acc_syms, i_m) = (o_staging_syms, o_acc_syms, o_m)
       where
         o_acc_syms = i_staging_syms <> i_acc_syms
-        (o_unavailable_syms, i_child_syms, o_m) =
+        (i_child_syms, o_m) =
           S.foldr'
-            (\i_staging_sym (i_unavailable_syms_acc, i_child_syms_acc, o_m_acc) ->
+            (\i_staging_sym (i_child_syms_acc, o_m_acc) ->
                case LM.lookup i_staging_sym (staticsMap store_mod) of
                  Just ss ->
-                   ( i_unavailable_syms_acc
-                   , collectAsteriusEntitySymbols ss i_child_syms_acc
+                   ( collectAsteriusEntitySymbols ss i_child_syms_acc
                    , o_m_acc
                        { staticsMap =
                            LM.insert i_staging_sym ss (staticsMap o_m_acc)
@@ -117,8 +113,7 @@ mergeSymbols _ gc_sections store_mod root_syms
                  _ ->
                    case LM.lookup i_staging_sym (functionMap store_mod) of
                      Just func ->
-                       ( i_unavailable_syms_acc
-                       , collectAsteriusEntitySymbols func i_child_syms_acc
+                       ( collectAsteriusEntitySymbols func i_child_syms_acc
                        , o_m_acc
                            { functionMap =
                                LM.insert
@@ -127,12 +122,22 @@ mergeSymbols _ gc_sections store_mod root_syms
                                  (functionMap o_m_acc)
                            })
                      _ ->
-                       ( S.insert i_staging_sym i_unavailable_syms_acc
-                       , i_child_syms_acc
-                       , o_m_acc))
-            (unavailableSymbols i_rep, S.empty, i_m)
+                       ( i_child_syms_acc
+                       , o_m_acc
+                           { staticsMap =
+                               LM.insert
+                                 ("__asterius_barf_" <> i_staging_sym)
+                                 AsteriusStatics
+                                   { staticsType = ConstBytes
+                                   , asteriusStatics =
+                                       [ Serialized $
+                                         entityName i_staging_sym <> "\0"
+                                       ]
+                                   }
+                                 (staticsMap o_m_acc)
+                           }))
+            (S.empty, i_m)
             i_staging_syms
-        o_rep = i_rep {unavailableSymbols = o_unavailable_syms}
         o_staging_syms = i_child_syms `S.difference` o_acc_syms
 
 makeInfoTableSet ::
@@ -220,7 +225,7 @@ linkStart debug has_main gc_sections binaryen store root_syms export_funcs =
       , staticMBlocks = static_mbs
       })
   where
-    (merged_m, report) =
+    (merged_m', report) =
       mergeSymbols
         debug
         gc_sections
@@ -231,6 +236,9 @@ linkStart debug has_main gc_sections binaryen store root_syms export_funcs =
              {entityName = "__asterius_jsffi_export_" <> entityName k}
            | k <- export_funcs
            ])
+    merged_m
+      | debug = addMemoryTrap merged_m'
+      | otherwise = merged_m'
     (result_m, ss_sym_map, func_sym_map, err_msgs, tbl_slots, static_mbs) =
       resolveAsteriusModule
         debug
