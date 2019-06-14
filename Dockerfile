@@ -43,23 +43,4 @@ RUN \
   curl https://downloads.haskell.org/~cabal/cabal-install-latest/cabal-install-2.4.1.0-x86_64-unknown-linux.tar.xz | tar xJ -C /root/.local/bin 'cabal' && \
   export WABT_BINDIR=/root/.local/bin && \
   stack --no-terminal install asterius wabt && \
-  stack --no-terminal exec ahc-boot && \
-  apt purge -y \
-    automake \
-    cmake \
-    curl \
-    g++ \
-    gnupg \
-    make \
-    python-minimal \
-    python3-minimal \
-    xz-utils && \
-  apt autoremove --purge -y && \
-  rm -rf \
-    /root/.stack/programs/x86_64-linux/*.tar.xz \
-    /var/lib/apt/lists/* \
-    /tmp/* && \
-  mv /root/.stack/programs /tmp/ && \
-  rm -rf /root/.stack && \
-  mkdir /root/.stack && \
-  mv /tmp/programs /root/.stack/
+  stack --no-terminal exec ahc-boot
